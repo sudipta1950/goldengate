@@ -1,0 +1,2 @@
+# goldengate
+Oracle GoldenGate scripts
