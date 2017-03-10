@@ -1,0 +1,97 @@
+#!/bin/bash
+# debugging, uncheck for enabling: 
+# set -x
+
+### OGG Tools home location - CHANGE THIS ###
+OGG_TOOLS_HOME=/u01/tools/ogg
+
+HOME_COUNT=1
+V_JAGENT=`cat $OGG_HOME/dirprm/jagent.prm 2>/dev/null | cut -d= -f2 | sed 's/\/cfg.*$//'`
+V_OGG_LOC=`ps -ef | grep [\.]\/mgr | awk '{print $10}' | sed 's/\/dirprm\/mgr\.prm//'`
+
+### Check if rlwrap is installed ###
+command -v rlwrap >/dev/null 2>&1 || echo >&2 "rlwrap is not found, not all aliases will work"
+
+### If oggtab doesn't exist then create on ###
+if ! [[ -f $OGG_TOOLS_HOME/oggtab ]] ; then touch $OGG_TOOLS_HOME/oggtab ; fi;
+
+# Print a fancy header
+printf "=Alias            MgrUp       OGG_HOME\n";
+
+### If we see a new manager running then add it to oggtab ###
+if ! [[ -z $V_OGG_LOC ]]; then 
+	for OGG_HOME in $V_OGG_LOC;
+	do
+		grep -q -F  "$OGG_HOME" $OGG_TOOLS_HOME/oggtab || echo $OGG_HOME >> $OGG_TOOLS_HOME/oggtab
+	done
+fi;
+
+
+for TAB_HOME in `cat $OGG_TOOLS_HOME/oggtab`;
+do
+	if [[ " ${V_OGG_LOC[*]} " == *" $TAB_HOME "* ]]; then
+		MGR_UP="Yes"
+	else
+		MGR_UP="No"
+	fi
+	
+	printf " $(tput bold)%-16s$(tput sgr0) %-11s %-16s \n" $(echo ogg$HOME_COUNT) $(echo $MGR_UP) $(echo $TAB_HOME)
+	alias ogg$HOME_COUNT="export OGG_HOME=$TAB_HOME; export JAGENT_HOME=$V_JAGENT; echo \"GoldenGate home set to: $TAB_HOME\"; f_dbhome_set"
+		if [ -n "$JAGENT_HOME" ]; then
+			echo "Jagent location set to: $JAGENT_HOME"
+		fi;
+		((HOME_COUNT++))
+done
+
+f_dbhome_set() {
+V_LIBNNZ=`ldd $TAB_HOME/ggsci | grep libnnz | cut -d" " -f3-`
+
+if [[ " $V_LIBNNZ " == " not found " ]]; then
+	echo "Warning libnnz not found: RDBMS home NOT set"
+fi
+}
+
+### Get information on GG processes ###
+f_gginfo() {
+	$OGG_HOME/ggsci << EOF | sed -e '1,11d'
+	info all allprocesses
+EOF
+}
+
+### GGSCI wrapper ###
+f_ggcom() {
+	$OGG_HOME/ggsci << EOF | sed -e '1,8d'
+	$1
+EOF
+}
+
+### Get version information ###
+f_ggversion() {
+	f_dbhome_set
+	
+	if [[ " $V_LIBNNZ " == " not found " ]]; then
+		echo "$*"
+   		return 1
+    fi
+
+	$OGG_HOME/ggsci << EOF # | sed -e '1,10d'
+	versions
+EOF
+ldd $OGG_HOME/ggsci | grep libnnz12.so | tr  -d '[:blank:]'
+}
+
+### setting some handy aliases ###
+alias ggstart="f_ggcom 'start mgr'"
+alias gg-startall="f_ggcom 'start *'"
+alias ggstop="f_ggcom 'stop mgr $(history -p \!)'"
+alias gg-stopall="f_ggcom 'stop *'"
+alias gginfo=f_gginfo
+alias ggversion=f_ggversion
+alias ggcom=f_ggcom
+alias ggreprofile='. $OGG_TOOLS_HOME/oggprofile'
+alias rgg='rlwrap $OGG_HOME/ggsci'
+alias rlogdump='rlwrap $OGG_HOME/logdump'
+alias gglog='view $OGG_HOME/ggserr.log'
+alias gghome='cd $OGG_HOME'
+
+set +x
