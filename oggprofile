@@ -1,4 +1,18 @@
 #!/bin/bash
+#
+# Oracle GoldenGate Environment Script
+#
+# Name        : oggprofile
+# Author      : Klaas-jan Jongsma
+# Description : Script to set up a Goldengate environment to easily set homes, run
+#               commands, keep track of what is installed where etc. More details can be 
+#               found here: https://jongsma.wordpress.com/2017/03/10/a-goldengate-profile-environment-script/
+#
+# Usage       : Change OGG_TOOLS_HOME to directory where you have placed this script
+#               Add the script to your profile eg:
+#               [oracle@rac1 [mycdb1] ~]$ grep oggprofile .bash_profile
+#               . /u01/tools/ogg/oggprofile
+#
 # debugging, uncheck for enabling: 
 # set -x
 
@@ -36,7 +50,7 @@ do
 	fi
 	
 	printf " $(tput bold)%-16s$(tput sgr0) %-11s %-16s \n" $(echo ogg$HOME_COUNT) $(echo $MGR_UP) $(echo $TAB_HOME)
-	alias ogg$HOME_COUNT="export OGG_HOME=$TAB_HOME; export JAGENT_HOME=$V_JAGENT; echo \"GoldenGate home set to: $TAB_HOME\"; f_dbhome_set"
+	alias ogg$HOME_COUNT="export OGG_HOME=$TAB_HOME; export PATH=$PATH:$OGG_HOME; export JAGENT_HOME=$V_JAGENT; echo \"GoldenGate home set to: $TAB_HOME\"; f_dbhome_set"
 		if [ -n "$JAGENT_HOME" ]; then
 			echo "Jagent location set to: $JAGENT_HOME"
 		fi;
@@ -77,7 +91,7 @@ f_ggversion() {
 	$OGG_HOME/ggsci << EOF # | sed -e '1,10d'
 	versions
 EOF
-ldd $OGG_HOME/ggsci | grep libnnz12.so | tr  -d '[:blank:]'
+ldd $OGG_HOME/ggsci | grep libnnz | tr  -d '[:blank:]'
 }
 
 ### setting some handy aliases ###
